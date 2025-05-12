@@ -1,2 +1,214 @@
 # Quick-Commerce
+
+![Quick_Commerce](https://raw.githubusercontent.com/adnanalam8360/Quick-Commerce/refs/heads/main/ecommerce.webp)
+
 A SQL-based data analysis project focused on quick commerce operations. Includes queries for customer behavior, feedback trends, order metrics, and performance insights.
+
+# 🧠 Business Problem
+Quick commerce companies must ensure fast delivery, high customer satisfaction, efficient inventory management, and well-performing delivery agents. Delays, poor customer feedback, and incorrect orders can result in churn and lost revenue. Stakeholders need actionable insights to optimize operations and enhance service quality.
+
+# 📊 Project Overview
+This SQL-based project analyzes a Quick Commerce dataset using MySQL to extract insights on customer satisfaction, delivery performance, inventory issues, and order trends. The analysis covers various dimensions such as time (monthly/weekly/hourly), location, agent performance, and order attributes.
+
+-> The project helps stakeholders:
+Identify delivery inefficiencies.
+Understand rating trends.
+Spot frequent stock-outs or incorrect orders.
+Monitor agent performance over time.
+
+# 👥 Stakeholder Problems
+-- Operations Manager --
+Are deliveries happening on time?
+Which agents have performance issues?
+
+-- Customer Service Head --
+Are customers satisfied with service and accuracy?
+What are the trends in positive or negative feedback?
+
+-- Inventory Manager --
+How frequently are stock-outs occurring?
+Which order types face more inventory issues?
+
+-- Marketing & Promotions Team --
+Are discounts improving customer satisfaction?
+Is there a link between rating and promotional offers?
+
+# 1. Data Preparation
+
+Crated a database in MYSQL SERVER
+create database quick_commerce;
+
+Using database
+use quick_commerce;
+
+Checking all the data is imported or not
+select count(*) from quick_commerce;
+
+Checking the datatype
+describe quick_commerce;
+
+-- Ensure proper datatype for key fields
+alter table quick_commerce
+modify column Order_id varchar(255);
+
+#  Delivery Performance
+
+-- What is the average delivery time per month for each delivery agent?
+select
+Agent_name as Agent,
+date_format(Order_Timestamp,'%Y-%m') as Month,
+round(avg(Delivery_Time_Minutes),2) as avg_delivery_time
+from
+quick_commerce
+group by 1,2
+order by avg_delivery_time desc;
+
+-- How many orders were placed each week by location?
+select
+Year(Order_Timestamp) as Year,
+week(Order_Timestamp,3) as week,
+Location,
+count(Order_id) as NO_Orders
+from
+quick_commerce
+group by 1,2,3
+order by  NO_Orders desc;
+
+-- What percentage of deliveries took more than 45 minutes, broken down by week and agent?
+Select
+Agent_Name,
+Year(Order_Timestamp) as Year,
+Week(Order_Timestamp,3) as Week,
+round(sum(case when Delivery_Time_Minutes>45 then 1 else 0 end)*100/count(*),2) as late_delivery_percent
+from 
+quick_commerce
+group by 1,2,3
+order by  late_delivery_percent desc;
+
+#  Customer Feedback Analysis
+-- What is the monthly average customer rating for each delivery agent?
+select
+Agent_Name,
+date_format(Order_Timestamp, '%Y-%m') as Month,
+round(avg(Rating),2) as Avg_Rating
+from
+quick_commerce
+group by 1,2
+order by Avg_Rating desc;
+
+-- How does the average customer service rating change over time by agent?
+select
+Agent_name,
+date_format(Order_Timestamp,'%Y-%m') as Time,
+round(avg(Customer_Service_Rating)) as Avg_Customer_Rating
+from
+quick_commerce
+group by 1,2
+order by Avg_Customer_Rating desc;
+
+-- Is there a difference in average rating between orders with and without discounts?
+select
+Discount_applied,
+avg(Rating)
+from
+quick_commerce
+group by 1;
+
+-- List all orders where a discount was applied but the rating was 2 stars or below.
+select
+*
+from
+quick_commerce
+where Discount_Applied='Yes' AND Rating<=2;
+
+# Order Accuracy & Feedback
+-- What is the monthly trend of incorrect orders per agent?
+select
+Agent_Name,
+date_format(Order_Timestamp,'%y-%m') as Month,
+count(*) as Incorrect_Orders
+from 
+quick_commerce
+where Order_Accuracy='incorrect'
+group by 1,2
+order by Incorrect_Orders desc;
+
+-- How many positive, neutral, and negative reviews were received per agent over the last 6 months?
+select
+Agent_Name,
+Customer_Feedback_Type,
+date_format(Order_Timestamp,'%Y-%m') as Month,
+count(*) as no_of_feedback
+from
+quick_commerce
+where Order_Timestamp >= date_sub(CURDATE(),interval 6 month)
+group by 1,2,3
+order by Agent_Name, Month;
+
+-- Which agent has the highest percentage of positive feedback in each month?
+select
+Agent_Name,
+date_format(Order_Timestamp,'%Y-%m') as Month,
+round(sum(case when Customer_Feedback_Type='Positive' then 1 else 0 End) *100/count(*),2) as Positive_FeedBack_Percentage
+from 
+quick_commerce
+group by 1,2
+order by Positive_FeedBack_Percentage desc;
+
+# Inventory Issues
+-- How many 'Out of Stock' incidents occurred per week for each order type?
+select
+Order_Type,
+Year(Order_Timestamp) as Year,
+Week(Order_Timestamp,3) as Week,
+count(Product_Availability) as Out_Of_Stock
+from
+quick_commerce
+where Product_Availability='Out of Stock'
+group by 1,2,3
+order by Out_Of_Stock desc;
+
+# Time-based Insights
+-- Which hours of the day have the highest Order?
+select
+Agent_Name,
+Order_type,
+hour(Order_Timestamp) as hour,
+count(Order_id) as no_orders
+from
+quick_commerce
+group by 1,2,3
+order by  no_orders desc;
+
+-- Which hours of the day have the highest average delivery time?" (Requires timestamp or derived hour column)
+select
+hour(Order_Timestamp) as Hour,
+round(avg(Delivery_Time_Minutes),2) as avg_highest_delivery
+from
+quick_commerce
+group by 1
+order by  avg_highest_delivery desc;
+
+# Location-Based Insights
+-- Which locations have the highest average customer rating in the last 3 months?
+select
+Location,
+date_format(Order_Timestamp,'%Y-%m') as Month,
+round(avg(Rating),2) as avg_cutomer_rating
+from
+quick_commerce
+where Order_Timestamp>=date_format(date_sub(curdate(),Interval 3 month),'%Y-%m-01')
+And Order_Timestamp< date_format(curdate(),'%Y-%m-01')
+group by 1,2
+order by avg_cutomer_rating desc;
+
+-- What is the average customer service rating for each price range category (Low, Medium, High) over time?
+select
+Price_Range,
+date_format(Order_Timestamp,'%Y-%m') as Month,
+round(avg(Customer_Service_Rating),2) as AVG_Customer_Rating
+from
+quick_commerce
+group by 1,2
+order by AVG_Customer_Rating desc;
+
